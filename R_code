@@ -1,0 +1,61 @@
+library(purrr)
+library('xml2')
+library(rvest)
+library(stats4)
+library(dplyr)
+library(tidyverse)
+rm(list=ls())
+
+
+# pre-load the movies' revenue information from the Kaggle Database, and then generate link for each film based its imdb tittle.  
+list <- read.csv(file = "mpaa_rating.csv", header = TRUE, stringsAsFactors = FALSE)
+list <- list %>% mutate(link1 = gsub('https://www.boxofficemojo.com/title/', '', boxoffice_link)) ?ref_=bo_se_r_1
+list <- list %>% mutate(imdb_title_id = gsub('.{16}$', '', link1))
+
+list <- list %>% select(imdb_title_id, MPAA_rating, Distributor, boxoffice_link)
+
+# Save the CSV file for the link we just generated. 
+write.csv(list,"/Users/xuhaopan/My Drive/Dissertation/1/data_2022/boxoffice_MPAA/mpaa_rating_2022_1_27.csv", row.names = FALSE)
+
+
+
+#define the webscarping function, this will be the main function we are going to grab movies' MPAA and the information of distributors from Boxofficemojo
+get_MPAA_rating = function(link) {
+  movie_page = read_html(link)
+  Distributor = movie_page %>% html_nodes(".a-spacing-none:nth-child(1) span+ span")%>%html_text() %>% paste (collapse = ",")
+  MPAA = movie_page %>% html_nodes(".a-spacing-none:nth-child(5)")%>%html_text() %>% paste (collapse = ",")
+  movie_a <- c(MPAA, Distributor, link)
+  return(movie_a)
+}
+
+
+# This is the for loop in R that execute the function "get_MPAA_rating". 
+u_movies1 = data.frame()
+for(movie in links){
+  movie_result <- get_MPAA_rating(movie)
+  u_movies1 = rbind(u_movies1, movie_result, stringsAsFactors = FALSE)
+}
+
+
+# editing the variables names for the newly scrapped data,a
+names(u_movies)[1] <- "MPAA_rating"
+names(u_movies)[2] <- "Distributor"
+names(u_movies)[3] <- "boxoffice_link"
+u_movies <- u_movies %>% mutate(link1 = gsub('https://www.boxofficemojo.com/title/', '', boxoffice_link))
+u_movies <- u_movies %>% mutate(imdb_title_id = gsub('.{16}$', '', link1))
+u_movies <- u_movies %>% select (imdb_title_id, MPAA_rating, Distributor, boxoffice_link)
+write.csv(u_movies,"/Users/xuhaopan/My Drive/Dissertation/1/data_2022/boxoffice_MPAA/mpaa_rating_2022_1_28_900_1600.csv", row.names = FALSE)
+
+u_movies <- u_movies %>% mutate(MPAA_rating = substr(MPAA_rating, start = 1, stop = 9))
+u_movies1 <- u_movies1 %>% mutate(MPAA_rating = substr(MPAA_rating, start = 1, stop = 9))
+names(u_movies1)[1] <- "MPAA_rating"
+names(u_movies1)[2] <- "Distributor"
+names(u_movies1)[3] <- "boxoffice_link"
+u_movies1 <- u_movies1 %>% mutate(link1 = gsub('https://www.boxofficemojo.com/title/', '', boxoffice_link))
+u_movies1 <- u_movies1 %>% mutate(imdb_title_id = gsub('.{16}$', '', link1))
+u_movies1 <- u_movies1 %>% select (imdb_title_id, MPAA_rating, Distributor, boxoffice_link)
+MPAA_900_4013 <- rbind(u_movies, u_movies1)
+
+rc <- c(",Dom", ",By", ",Do")
+MPAA_900_4013 <- MPAA_900_4013 %>% mutate(MPAA_rating = gsub(",Dom|,By|,Do","", MPAA_rating))
+write.csv(MPAA_900_4013,"/Users/xuhaopan/My Drive/Dissertation/1/data_2022/boxoffice_MPAA/mpaa_rating_MPAA_900_4013.csv", row.names = FALSE)
